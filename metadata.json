@@ -1,0 +1,8 @@
+{
+  "name": "VrcModMenu — Orbit Client",
+  "description": "VrcModMenu showcase and download hub for Orbit Client, the high-performance monochrome VRChat utility.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
