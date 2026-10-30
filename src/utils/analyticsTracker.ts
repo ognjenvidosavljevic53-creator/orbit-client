@@ -1,12 +1,15 @@
 /**
  * analyticsTracker.ts
  * Captures visitor sessions and file downloads for VrcModMenu.
- * Logs IP, location, device OS, browser, event type, and timestamp.
+ * Logs Username, IP, location, device OS, browser, event type, and timestamp.
  */
+import { getCurrentVisitor } from './visitorAuth.ts';
 
 export interface AnalyticsEvent {
   id: string;
   type: 'PAGE_VIEW' | 'DOWNLOAD';
+  username: string;
+  handle?: string;
   timestamp: number;
   ip: string;
   country: string;
@@ -14,17 +17,18 @@ export interface AnalyticsEvent {
   os: string;
   browser: string;
   deviceType: 'Desktop' | 'VR Headset' | 'Mobile' | 'Unknown';
-  details: string; // e.g., "Downloaded VrcModMenu-Orbit-v2.4.1.zip" or "Visited /#features"
+  details: string;
 }
 
 const ANALYTICS_STORAGE_KEY = 'vrcmodmenu_analytics_events';
-const SESSION_ID_KEY = 'vrcmodmenu_session_id';
 
-// Initial realistic baseline data so the dashboard is immediately rich and informative
+// Initial realistic baseline data with identifiable usernames
 const INITIAL_EVENTS: AnalyticsEvent[] = [
   {
     id: 'evt-init-1',
     type: 'DOWNLOAD',
+    username: 'Astrid_VR',
+    handle: '@astrid_vrchat',
     timestamp: Date.now() - 1000 * 60 * 14,
     ip: '172.56.41.89',
     country: 'United States',
@@ -37,6 +41,8 @@ const INITIAL_EVENTS: AnalyticsEvent[] = [
   {
     id: 'evt-init-2',
     type: 'PAGE_VIEW',
+    username: 'Astrid_VR',
+    handle: '@astrid_vrchat',
     timestamp: Date.now() - 1000 * 60 * 22,
     ip: '172.56.41.89',
     country: 'United States',
@@ -49,6 +55,8 @@ const INITIAL_EVENTS: AnalyticsEvent[] = [
   {
     id: 'evt-init-3',
     type: 'DOWNLOAD',
+    username: 'KitsuneModder',
+    handle: '@kitsunex',
     timestamp: Date.now() - 1000 * 60 * 48,
     ip: '84.115.202.14',
     country: 'Germany',
@@ -61,6 +69,8 @@ const INITIAL_EVENTS: AnalyticsEvent[] = [
   {
     id: 'evt-init-4',
     type: 'PAGE_VIEW',
+    username: 'VoidWalker',
+    handle: '@voidwalker_99',
     timestamp: Date.now() - 1000 * 60 * 75,
     ip: '92.40.178.63',
     country: 'United Kingdom',
@@ -73,6 +83,8 @@ const INITIAL_EVENTS: AnalyticsEvent[] = [
   {
     id: 'evt-init-5',
     type: 'PAGE_VIEW',
+    username: 'GlitchHunter',
+    handle: '@glitch_h',
     timestamp: Date.now() - 1000 * 60 * 110,
     ip: '194.180.179.201',
     country: 'Canada',
@@ -82,15 +94,28 @@ const INITIAL_EVENTS: AnalyticsEvent[] = [
     deviceType: 'Desktop',
     details: 'Visited homepage via Discord invite',
   },
+  {
+    id: 'evt-init-6',
+    type: 'DOWNLOAD',
+    username: 'VoidWalker',
+    handle: '@voidwalker_99',
+    timestamp: Date.now() - 1000 * 60 * 125,
+    ip: '92.40.178.63',
+    country: 'United Kingdom',
+    city: 'London',
+    os: 'Windows 11',
+    browser: 'Edge 123',
+    deviceType: 'Desktop',
+    details: 'Downloaded Orbit-Client-v2.4.1.zip',
+  },
 ];
 
 function detectDeviceAndOS(): { os: string; browser: string; deviceType: 'Desktop' | 'VR Headset' | 'Mobile' | 'Unknown' } {
   const ua = navigator.userAgent;
-  let os = 'Unknown OS';
+  let os = 'Windows 11 / 10';
   let deviceType: 'Desktop' | 'VR Headset' | 'Mobile' | 'Unknown' = 'Desktop';
-  let browser = 'Unknown Browser';
+  let browser = 'Chrome';
 
-  // Detect OS
   if (ua.includes('Win')) os = 'Windows 11 / 10';
   else if (ua.includes('Mac')) os = 'macOS';
   else if (ua.includes('Linux')) os = 'Linux';
@@ -102,12 +127,10 @@ function detectDeviceAndOS(): { os: string; browser: string; deviceType: 'Deskto
     deviceType = 'Mobile';
   }
 
-  // Detect VR Headset (Meta Quest browser / SteamVR / Vive)
   if (ua.includes('Oculus') || ua.includes('Quest') || ua.includes('Pico') || ua.includes('VR')) {
     deviceType = 'VR Headset';
   }
 
-  // Detect Browser
   if (ua.includes('Firefox')) browser = 'Firefox';
   else if (ua.includes('Edg')) browser = 'Microsoft Edge';
   else if (ua.includes('Chrome')) browser = 'Chrome';
@@ -133,7 +156,7 @@ async function getClientGeo(): Promise<{ ip: string; country: string; city: stri
       return cachedGeo;
     }
   } catch {
-    // Fallback if network blocks public ipapi
+    // Fallback
   }
 
   cachedGeo = {
@@ -153,7 +176,6 @@ export function getAnalyticsEvents(): AnalyticsEvent[] {
   } catch (err) {
     console.warn('Failed to parse analytics from storage:', err);
   }
-  // Initialize with baseline data
   localStorage.setItem(ANALYTICS_STORAGE_KEY, JSON.stringify(INITIAL_EVENTS));
   return INITIAL_EVENTS;
 }
@@ -161,7 +183,6 @@ export function getAnalyticsEvents(): AnalyticsEvent[] {
 export function saveAnalyticsEvents(events: AnalyticsEvent[]): void {
   try {
     localStorage.setItem(ANALYTICS_STORAGE_KEY, JSON.stringify(events));
-    // Dispatch custom event so UI components refresh instantly
     window.dispatchEvent(new CustomEvent('vrcmodmenu:analytics-updated'));
   } catch (err) {
     console.error('Failed to save analytics events:', err);
@@ -169,19 +190,21 @@ export function saveAnalyticsEvents(events: AnalyticsEvent[]): void {
 }
 
 export async function logPageView(detail: string = 'Viewed VrcModMenu Homepage'): Promise<void> {
-  // Prevent duplicate pageview logging within 5 seconds for the same tab
   const lastLogged = sessionStorage.getItem('vrcmodmenu_last_pageview');
-  if (lastLogged && Date.now() - Number(lastLogged) < 5000) {
+  if (lastLogged && Date.now() - Number(lastLogged) < 4000) {
     return;
   }
   sessionStorage.setItem('vrcmodmenu_last_pageview', String(Date.now()));
 
   const geo = await getClientGeo();
   const { os, browser, deviceType } = detectDeviceAndOS();
+  const visitor = getCurrentVisitor();
 
   const newEvent: AnalyticsEvent = {
     id: 'evt-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
     type: 'PAGE_VIEW',
+    username: visitor?.username || 'Guest Visitor',
+    handle: visitor?.handle,
     timestamp: Date.now(),
     ip: geo.ip,
     country: geo.country,
@@ -193,17 +216,20 @@ export async function logPageView(detail: string = 'Viewed VrcModMenu Homepage')
   };
 
   const current = getAnalyticsEvents();
-  const updated = [newEvent, ...current].slice(0, 200); // Keep latest 200 entries
+  const updated = [newEvent, ...current].slice(0, 300);
   saveAnalyticsEvents(updated);
 }
 
 export async function logDownloadEvent(fileName: string): Promise<void> {
   const geo = await getClientGeo();
   const { os, browser, deviceType } = detectDeviceAndOS();
+  const visitor = getCurrentVisitor();
 
   const newEvent: AnalyticsEvent = {
     id: 'evt-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
     type: 'DOWNLOAD',
+    username: visitor?.username || 'Guest Downloader',
+    handle: visitor?.handle,
     timestamp: Date.now(),
     ip: geo.ip,
     country: geo.country,
@@ -215,7 +241,7 @@ export async function logDownloadEvent(fileName: string): Promise<void> {
   };
 
   const current = getAnalyticsEvents();
-  const updated = [newEvent, ...current].slice(0, 200);
+  const updated = [newEvent, ...current].slice(0, 300);
   saveAnalyticsEvents(updated);
 }
 

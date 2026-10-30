@@ -12,14 +12,14 @@ import {
   BarChart3,
   Sliders,
   Lock,
-  Unlock,
   Copy,
-  ExternalLink,
-  Shield,
-  Eye,
   Download,
   Trash2,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Search,
+  User,
+  Bot,
+  Sparkles
 } from 'lucide-react';
 import { 
   ReleaseConfig, 
@@ -43,6 +43,7 @@ import {
   generateCoOwnerInviteLink 
 } from '../utils/roleManager.ts';
 import { PlanetLogo } from './PlanetLogo.tsx';
+import { OrbitAiSentinel } from './OrbitAiSentinel.tsx';
 
 interface OwnerPanelProps {
   isOpen: boolean;
@@ -51,7 +52,7 @@ interface OwnerPanelProps {
 }
 
 export const OwnerPanel: React.FC<OwnerPanelProps> = ({ isOpen, onClose, onConfigUpdated }) => {
-  const [activeTab, setActiveTab] = useState<'files' | 'customize' | 'analytics' | 'roles'>('files');
+  const [activeTab, setActiveTab] = useState<'files' | 'customize' | 'analytics' | 'ai' | 'roles'>('analytics');
   
   // Release & Site Config State
   const [config, setConfig] = useState<ReleaseConfig>(DEFAULT_RELEASE);
@@ -65,9 +66,10 @@ export const OwnerPanel: React.FC<OwnerPanelProps> = ({ isOpen, onClose, onConfi
   const [roleState, setRoleState] = useState<RoleState>(getRoleState());
   const [copiedInvite, setCopiedInvite] = useState(false);
 
-  // Analytics State
+  // Analytics & Visitor Search State
   const [events, setEvents] = useState<AnalyticsEvent[]>([]);
   const [analyticsFilter, setAnalyticsFilter] = useState<'ALL' | 'DOWNLOAD' | 'PAGE_VIEW'>('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -101,7 +103,7 @@ export const OwnerPanel: React.FC<OwnerPanelProps> = ({ isOpen, onClose, onConfi
   const isOwner = roleState.currentRole === 'owner';
 
   const handleFileUpload = async (file: File) => {
-    if (!isOwner) return; // Prevent co-owners from modifying files
+    if (!isOwner) return;
     try {
       setIsProcessing(true);
       const { fileName, fileSize, sha256 } = await storeReleaseFile(file);
@@ -184,12 +186,23 @@ export const OwnerPanel: React.FC<OwnerPanelProps> = ({ isOpen, onClose, onConfi
   // Analytics Metrics
   const totalViews = events.filter((e) => e.type === 'PAGE_VIEW').length;
   const totalDownloads = events.filter((e) => e.type === 'DOWNLOAD').length;
-  const uniqueIps = new Set(events.map((e) => e.ip)).size;
+  const uniqueUsers = Array.from(new Set(events.map((e) => e.username))).length;
   const conversionRate = totalViews > 0 ? ((totalDownloads / totalViews) * 100).toFixed(1) : '0.0';
 
+  // Filter and Search visitors by name, handle, IP, or city
   const filteredEvents = events.filter((e) => {
-    if (analyticsFilter === 'ALL') return true;
-    return e.type === analyticsFilter;
+    const matchesType = analyticsFilter === 'ALL' || e.type === analyticsFilter;
+    if (!matchesType) return false;
+
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    const matchName = (e.username || '').toLowerCase().includes(q);
+    const matchHandle = (e.handle || '').toLowerCase().includes(q);
+    const matchIp = (e.ip || '').toLowerCase().includes(q);
+    const matchCity = (e.city || '').toLowerCase().includes(q);
+    const matchCountry = (e.country || '').toLowerCase().includes(q);
+    const matchDetails = (e.details || '').toLowerCase().includes(q);
+    return matchName || matchHandle || matchIp || matchCity || matchCountry || matchDetails;
   });
 
   if (!isOpen) return null;
@@ -223,7 +236,7 @@ export const OwnerPanel: React.FC<OwnerPanelProps> = ({ isOpen, onClose, onConfi
                 </span>
               </div>
               <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight font-mono uppercase pt-0.5">
-                Portal Operations & Telemetry
+                Portal Operations & AI Telemetry
               </h3>
             </div>
           </div>
@@ -241,6 +254,30 @@ export const OwnerPanel: React.FC<OwnerPanelProps> = ({ isOpen, onClose, onConfi
 
         {/* Navigation Tabs */}
         <div className="flex flex-wrap items-center gap-1.5 pt-4 pb-4 border-b border-neutral-900 font-mono text-xs">
+          <button
+            onClick={() => setActiveTab('analytics')}
+            className={`flex items-center gap-2 px-4 py-2 border transition-colors ${
+              activeTab === 'analytics'
+                ? 'border-white bg-white text-black font-bold'
+                : 'border-neutral-800 text-neutral-400 hover:border-neutral-600 hover:text-white'
+            }`}
+          >
+            <BarChart3 className="w-3.5 h-3.5" />
+            <span>Visitor & Download Tracker</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('ai')}
+            className={`flex items-center gap-2 px-4 py-2 border transition-colors ${
+              activeTab === 'ai'
+                ? 'border-white bg-white text-black font-bold'
+                : 'border-neutral-800 text-neutral-400 hover:border-neutral-600 hover:text-white'
+            }`}
+          >
+            <Bot className="w-3.5 h-3.5" />
+            <span>Orbit AI Sentinel</span>
+          </button>
+
           <button
             onClick={() => setActiveTab('files')}
             className={`flex items-center gap-2 px-4 py-2 border transition-colors ${
@@ -266,18 +303,6 @@ export const OwnerPanel: React.FC<OwnerPanelProps> = ({ isOpen, onClose, onConfi
           </button>
 
           <button
-            onClick={() => setActiveTab('analytics')}
-            className={`flex items-center gap-2 px-4 py-2 border transition-colors ${
-              activeTab === 'analytics'
-                ? 'border-white bg-white text-black font-bold'
-                : 'border-neutral-800 text-neutral-400 hover:border-neutral-600 hover:text-white'
-            }`}
-          >
-            <BarChart3 className="w-3.5 h-3.5" />
-            <span>Visitor & Download Tracker ({totalDownloads})</span>
-          </button>
-
-          <button
             onClick={() => setActiveTab('roles')}
             className={`flex items-center gap-2 px-4 py-2 border transition-colors ${
               activeTab === 'roles'
@@ -300,11 +325,214 @@ export const OwnerPanel: React.FC<OwnerPanelProps> = ({ isOpen, onClose, onConfi
           </div>
         )}
 
-        {/* ================= TAB 1: FILE & RELEASE SETTINGS ================= */}
+        {/* ================= TAB 1: VISITOR & DOWNLOAD TRACKER WITH VISITOR SEARCH ================= */}
+        {activeTab === 'analytics' && (
+          <div className="mt-6 space-y-6 animate-in fade-in duration-150 font-mono text-xs">
+            
+            {/* KPI Cards Strip */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="border border-neutral-800 bg-black p-4 space-y-1">
+                <span className="text-neutral-400 text-[11px] block">TOTAL VIEWS</span>
+                <span className="text-2xl font-bold text-white tabular-nums">{totalViews}</span>
+                <span className="text-[10px] text-neutral-500 block">Page impressions</span>
+              </div>
+
+              <div className="border border-white bg-neutral-900 p-4 space-y-1 shadow-[0_0_20px_rgba(255,255,255,0.08)]">
+                <span className="text-neutral-300 text-[11px] block font-semibold">TOTAL DOWNLOADS</span>
+                <span className="text-2xl font-bold text-white tabular-nums">{totalDownloads}</span>
+                <span className="text-[10px] text-neutral-400 block">Client packages delivered</span>
+              </div>
+
+              <div className="border border-neutral-800 bg-black p-4 space-y-1">
+                <span className="text-neutral-400 text-[11px] block">UNIQUE VISITORS</span>
+                <span className="text-2xl font-bold text-white tabular-nums">{uniqueUsers}</span>
+                <span className="text-[10px] text-neutral-500 block">Identified visitor names</span>
+              </div>
+
+              <div className="border border-neutral-800 bg-black p-4 space-y-1">
+                <span className="text-neutral-400 text-[11px] block">CONVERSION RATE</span>
+                <span className="text-2xl font-bold text-white tabular-nums">{conversionRate}%</span>
+                <span className="text-[10px] text-neutral-500 block">View-to-download</span>
+              </div>
+            </div>
+
+            {/* VISITOR NAME SEARCH BAR */}
+            <div className="border border-neutral-800 bg-black p-3 space-y-2">
+              <div className="flex items-center justify-between text-neutral-400 text-[11px]">
+                <span className="font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                  <Search className="w-3.5 h-3.5" />
+                  <span>Search Visitors by Name / Handle / Location</span>
+                </span>
+                <span>
+                  Showing <strong>{filteredEvents.length}</strong> of {events.length} records
+                </span>
+              </div>
+
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 w-4 h-4 text-neutral-500" />
+                <input
+                  type="text"
+                  placeholder="Type visitor name (e.g. 'Astrid', 'KitsuneModder', 'Chicago', '172.56')..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-9 py-2 border border-neutral-800 bg-neutral-950 text-xs text-white placeholder-neutral-600 focus:border-white focus:outline-none"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2.5 top-2.5 text-neutral-500 hover:text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Filter and Action Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-1 p-1 border border-neutral-800 bg-black">
+                <button
+                  onClick={() => setAnalyticsFilter('ALL')}
+                  className={`px-3 py-1 transition-colors ${
+                    analyticsFilter === 'ALL' ? 'bg-white text-black font-bold' : 'text-neutral-400 hover:text-white'
+                  }`}
+                >
+                  All ({events.length})
+                </button>
+                <button
+                  onClick={() => setAnalyticsFilter('DOWNLOAD')}
+                  className={`px-3 py-1 transition-colors ${
+                    analyticsFilter === 'DOWNLOAD' ? 'bg-white text-black font-bold' : 'text-neutral-400 hover:text-white'
+                  }`}
+                >
+                  Downloads ({totalDownloads})
+                </button>
+                <button
+                  onClick={() => setAnalyticsFilter('PAGE_VIEW')}
+                  className={`px-3 py-1 transition-colors ${
+                    analyticsFilter === 'PAGE_VIEW' ? 'bg-white text-black font-bold' : 'text-neutral-400 hover:text-white'
+                  }`}
+                >
+                  Page Views ({totalViews})
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setActiveTab('ai')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-white bg-white text-black font-bold uppercase hover:bg-black hover:text-white transition-colors"
+                >
+                  <Bot className="w-3.5 h-3.5" />
+                  <span>Run AI Audit</span>
+                </button>
+                <button
+                  onClick={handleExportAnalyticsJson}
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-neutral-800 bg-black text-neutral-300 hover:text-white hover:border-neutral-600 transition-colors"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                  <span>Export</span>
+                </button>
+                {isOwner && (
+                  <button
+                    onClick={() => {
+                      if (confirm('Clear all visitor and download logs?')) {
+                        clearAnalyticsLogs();
+                      }
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 border border-neutral-800 bg-black text-neutral-400 hover:text-white hover:border-neutral-600 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Clear</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Log Table */}
+            <div className="border border-neutral-800 bg-black overflow-hidden">
+              <div className="max-h-[360px] overflow-y-auto divide-y divide-neutral-900">
+                {filteredEvents.length === 0 ? (
+                  <div className="p-8 text-center text-neutral-500 space-y-1">
+                    <p>No activity records matched your search query "{searchQuery}".</p>
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="text-white underline hover:text-neutral-300"
+                    >
+                      Clear search
+                    </button>
+                  </div>
+                ) : (
+                  filteredEvents.map((evt) => {
+                    const isDl = evt.type === 'DOWNLOAD';
+                    const dateFormatted = new Date(evt.timestamp).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit',
+                    });
+
+                    return (
+                      <div key={evt.id} className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-neutral-950 transition-colors">
+                        <div className="flex items-start sm:items-center gap-3 min-w-0">
+                          <span className={`px-2 py-0.5 text-[10px] uppercase font-bold shrink-0 border ${
+                            isDl ? 'border-white bg-white text-black' : 'border-neutral-800 bg-neutral-900 text-neutral-400'
+                          }`}>
+                            {evt.type}
+                          </span>
+                          
+                          <div className="min-w-0 space-y-0.5">
+                            {/* Visitor Username & Handle */}
+                            <div className="flex items-center gap-2 truncate">
+                              <div className="flex items-center gap-1.5 text-white font-bold text-xs truncate">
+                                <User className="w-3 h-3 text-neutral-400 shrink-0" />
+                                <span className="truncate">{evt.username}</span>
+                              </div>
+                              {evt.handle && (
+                                <span className="text-neutral-400 text-[11px] truncate">
+                                  {evt.handle}
+                                </span>
+                              )}
+                              <span className="text-neutral-600">·</span>
+                              <span className="text-neutral-400 text-[11px] truncate">
+                                {evt.city}, {evt.country}
+                              </span>
+                            </div>
+
+                            {/* Activity Detail */}
+                            <div className="text-[11px] text-neutral-400 truncate">
+                              {evt.details}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Hardware & Timestamp */}
+                        <div className="flex sm:flex-col items-center sm:items-end justify-between text-[10px] text-neutral-400 shrink-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-white font-medium">{evt.os}</span>
+                            <span className="text-neutral-600">|</span>
+                            <span className="text-neutral-300">{evt.deviceType}</span>
+                          </div>
+                          <span className="tabular-nums">{dateFormatted}</span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+          </div>
+        )}
+
+        {/* ================= TAB 2: ORBIT AI SENTINEL ================= */}
+        {activeTab === 'ai' && (
+          <div className="mt-6 space-y-6 animate-in fade-in duration-150">
+            <OrbitAiSentinel events={events} />
+          </div>
+        )}
+
+        {/* ================= TAB 3: FILE & RELEASE SETTINGS ================= */}
         {activeTab === 'files' && (
           <div className="mt-6 space-y-6 animate-in fade-in duration-150">
-            
-            {/* If Co-Owner: Locked notice banner */}
             {!isOwner && (
               <div className="border border-neutral-700 bg-neutral-900/90 p-4 font-mono text-xs text-neutral-300 space-y-1">
                 <div className="flex items-center gap-2 text-white font-bold">
@@ -317,7 +545,6 @@ export const OwnerPanel: React.FC<OwnerPanelProps> = ({ isOpen, onClose, onConfi
               </div>
             )}
 
-            {/* Upload Area */}
             <div className="space-y-3">
               <div className="flex items-center justify-between font-mono text-xs">
                 <span className="font-bold text-white uppercase tracking-wider flex items-center gap-2">
@@ -372,7 +599,6 @@ export const OwnerPanel: React.FC<OwnerPanelProps> = ({ isOpen, onClose, onConfi
               </div>
             </div>
 
-            {/* External URL option */}
             <div className="space-y-2 pt-4 border-t border-neutral-900">
               <div className="flex items-center justify-between font-mono text-xs">
                 <span className="font-bold text-white uppercase tracking-wider">
@@ -395,7 +621,6 @@ export const OwnerPanel: React.FC<OwnerPanelProps> = ({ isOpen, onClose, onConfi
               </div>
             </div>
 
-            {/* File Metadata fields */}
             <div className="space-y-4 pt-4 border-t border-neutral-900">
               <span className="font-bold text-white uppercase tracking-wider font-mono text-xs block">
                 3. File Attributes & Checksum
@@ -458,7 +683,7 @@ export const OwnerPanel: React.FC<OwnerPanelProps> = ({ isOpen, onClose, onConfi
           </div>
         )}
 
-        {/* ================= TAB 2: SITE CUSTOMIZATION (BOTH CAN EDIT) ================= */}
+        {/* ================= TAB 4: SITE CUSTOMIZATION ================= */}
         {activeTab === 'customize' && (
           <form onSubmit={handleSaveForm} className="mt-6 space-y-6 animate-in fade-in duration-150 font-mono text-xs">
             <div className="border border-neutral-800 bg-black p-4 space-y-1">
@@ -534,145 +759,9 @@ export const OwnerPanel: React.FC<OwnerPanelProps> = ({ isOpen, onClose, onConfi
           </form>
         )}
 
-        {/* ================= TAB 3: VISITOR & DOWNLOAD TRACKER ================= */}
-        {activeTab === 'analytics' && (
-          <div className="mt-6 space-y-6 animate-in fade-in duration-150 font-mono text-xs">
-            
-            {/* KPI Cards Strip */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="border border-neutral-800 bg-black p-4 space-y-1">
-                <span className="text-neutral-400 text-[11px] block">TOTAL VIEWS</span>
-                <span className="text-2xl font-bold text-white tabular-nums">{totalViews}</span>
-                <span className="text-[10px] text-neutral-500 block">Page impressions</span>
-              </div>
-
-              <div className="border border-white bg-neutral-900 p-4 space-y-1 shadow-[0_0_20px_rgba(255,255,255,0.08)]">
-                <span className="text-neutral-300 text-[11px] block font-semibold">TOTAL DOWNLOADS</span>
-                <span className="text-2xl font-bold text-white tabular-nums">{totalDownloads}</span>
-                <span className="text-[10px] text-neutral-400 block">Unique client packages</span>
-              </div>
-
-              <div className="border border-neutral-800 bg-black p-4 space-y-1">
-                <span className="text-neutral-400 text-[11px] block">UNIQUE VISITORS</span>
-                <span className="text-2xl font-bold text-white tabular-nums">{uniqueIps}</span>
-                <span className="text-[10px] text-neutral-500 block">Unique IP nodes</span>
-              </div>
-
-              <div className="border border-neutral-800 bg-black p-4 space-y-1">
-                <span className="text-neutral-400 text-[11px] block">CONVERSION RATE</span>
-                <span className="text-2xl font-bold text-white tabular-nums">{conversionRate}%</span>
-                <span className="text-[10px] text-neutral-500 block">View-to-download</span>
-              </div>
-            </div>
-
-            {/* Filter and Action Bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-              <div className="flex items-center gap-1 p-1 border border-neutral-800 bg-black">
-                <button
-                  onClick={() => setAnalyticsFilter('ALL')}
-                  className={`px-3 py-1 transition-colors ${
-                    analyticsFilter === 'ALL' ? 'bg-white text-black font-bold' : 'text-neutral-400 hover:text-white'
-                  }`}
-                >
-                  All Activity ({events.length})
-                </button>
-                <button
-                  onClick={() => setAnalyticsFilter('DOWNLOAD')}
-                  className={`px-3 py-1 transition-colors ${
-                    analyticsFilter === 'DOWNLOAD' ? 'bg-white text-black font-bold' : 'text-neutral-400 hover:text-white'
-                  }`}
-                >
-                  Downloads ({totalDownloads})
-                </button>
-                <button
-                  onClick={() => setAnalyticsFilter('PAGE_VIEW')}
-                  className={`px-3 py-1 transition-colors ${
-                    analyticsFilter === 'PAGE_VIEW' ? 'bg-white text-black font-bold' : 'text-neutral-400 hover:text-white'
-                  }`}
-                >
-                  Page Views ({totalViews})
-                </button>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleExportAnalyticsJson}
-                  className="flex items-center gap-1.5 px-3 py-1.5 border border-neutral-800 bg-black text-neutral-300 hover:text-white hover:border-neutral-600 transition-colors"
-                >
-                  <FileSpreadsheet className="w-3.5 h-3.5" />
-                  <span>Export JSON</span>
-                </button>
-                {isOwner && (
-                  <button
-                    onClick={() => {
-                      if (confirm('Clear all visitor and download logs?')) {
-                        clearAnalyticsLogs();
-                      }
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 border border-neutral-800 bg-black text-neutral-400 hover:text-white hover:border-neutral-600 transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Clear</span>
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Log Table */}
-            <div className="border border-neutral-800 bg-black overflow-hidden">
-              <div className="max-h-[340px] overflow-y-auto divide-y divide-neutral-900">
-                {filteredEvents.length === 0 ? (
-                  <div className="p-8 text-center text-neutral-500">
-                    No activity records recorded yet.
-                  </div>
-                ) : (
-                  filteredEvents.map((evt) => {
-                    const isDl = evt.type === 'DOWNLOAD';
-                    const dateFormatted = new Date(evt.timestamp).toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      second: '2-digit',
-                    });
-
-                    return (
-                      <div key={evt.id} className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-neutral-950 transition-colors">
-                        <div className="flex items-start sm:items-center gap-3 min-w-0">
-                          <span className={`px-2 py-0.5 text-[10px] uppercase font-bold shrink-0 border ${
-                            isDl ? 'border-white bg-white text-black' : 'border-neutral-800 bg-neutral-900 text-neutral-400'
-                          }`}>
-                            {evt.type}
-                          </span>
-                          <div className="min-w-0 space-y-0.5">
-                            <div className="flex items-center gap-2 truncate">
-                              <span className="font-bold text-white text-[11px] truncate">{evt.ip}</span>
-                              <span className="text-neutral-600">·</span>
-                              <span className="text-neutral-400 text-[11px] truncate">{evt.city}, {evt.country}</span>
-                            </div>
-                            <div className="text-[10px] text-neutral-400 truncate">
-                              {evt.details}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex sm:flex-col items-center sm:items-end justify-between text-[10px] text-neutral-400 shrink-0">
-                          <span className="text-white font-medium">{evt.os} · {evt.browser}</span>
-                          <span>{dateFormatted}</span>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-
-          </div>
-        )}
-
-        {/* ================= TAB 4: ROLES & CO-OWNER MANAGEMENT ================= */}
+        {/* ================= TAB 5: ROLES & CO-OWNER MANAGEMENT ================= */}
         {activeTab === 'roles' && (
           <div className="mt-6 space-y-6 animate-in fade-in duration-150 font-mono text-xs">
-            
-            {/* Role Switcher Test Box */}
             <div className="border border-neutral-800 bg-black p-5 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -729,14 +818,13 @@ export const OwnerPanel: React.FC<OwnerPanelProps> = ({ isOpen, onClose, onConfi
               </div>
             </div>
 
-            {/* Shareable Co-Owner Invite Link Generator */}
             <div className="border border-neutral-800 bg-black p-5 space-y-3">
               <div className="flex items-center gap-2 text-white font-bold">
                 <Users className="w-4 h-4" />
                 <span className="uppercase">Co-Owner Instant Invite Link</span>
               </div>
               <p className="text-neutral-400 text-xs leading-relaxed">
-                Send this link to your friend. When they open the website with this link, they are automatically granted the <strong>Co-Owner</strong> role. They will be able to customize the website text and view who downloaded, but the system will block them from changing or replacing the release file.
+                Send this link to your friend. When they open the website with this link, they are automatically granted the <strong>Co-Owner</strong> role.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-2 pt-2">
@@ -753,63 +841,6 @@ export const OwnerPanel: React.FC<OwnerPanelProps> = ({ isOpen, onClose, onConfi
                 </button>
               </div>
             </div>
-
-            {/* Role Permissions Comparison Matrix */}
-            <div className="border border-neutral-800 bg-black p-5 space-y-3">
-              <span className="text-white font-bold uppercase block">
-                Role Permission Matrix
-              </span>
-              <div className="border border-neutral-900 divide-y divide-neutral-900 text-xs">
-                <div className="p-2.5 flex justify-between bg-neutral-950 text-neutral-400 font-semibold">
-                  <span>Capability / Action</span>
-                  <div className="flex gap-8">
-                    <span className="w-16 text-center text-white">Owner</span>
-                    <span className="w-20 text-center text-neutral-300">Co-Owner</span>
-                  </div>
-                </div>
-
-                <div className="p-2.5 flex justify-between text-neutral-300">
-                  <span>Upload & Replace Release Binary</span>
-                  <div className="flex gap-8">
-                    <span className="w-16 text-center text-white font-bold">Allowed</span>
-                    <span className="w-20 text-center text-neutral-400 font-semibold">Blocked</span>
-                  </div>
-                </div>
-
-                <div className="p-2.5 flex justify-between text-neutral-300">
-                  <span>Set External Download Link</span>
-                  <div className="flex gap-8">
-                    <span className="w-16 text-center text-white font-bold">Allowed</span>
-                    <span className="w-20 text-center text-neutral-400 font-semibold">Blocked</span>
-                  </div>
-                </div>
-
-                <div className="p-2.5 flex justify-between text-neutral-300">
-                  <span>Customize Site Name & Client Name</span>
-                  <div className="flex gap-8">
-                    <span className="w-16 text-center text-white font-bold">Allowed</span>
-                    <span className="w-20 text-center text-white font-bold">Allowed</span>
-                  </div>
-                </div>
-
-                <div className="p-2.5 flex justify-between text-neutral-300">
-                  <span>Edit Version & Status Indicator</span>
-                  <div className="flex gap-8">
-                    <span className="w-16 text-center text-white font-bold">Allowed</span>
-                    <span className="w-20 text-center text-white font-bold">Allowed</span>
-                  </div>
-                </div>
-
-                <div className="p-2.5 flex justify-between text-neutral-300">
-                  <span>View Visitor & Download Logs</span>
-                  <div className="flex gap-8">
-                    <span className="w-16 text-center text-white font-bold">Allowed</span>
-                    <span className="w-20 text-center text-white font-bold">Allowed</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
           </div>
         )}
 

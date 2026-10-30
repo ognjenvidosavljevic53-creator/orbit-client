@@ -9,16 +9,24 @@ import { FaqSection } from './components/FaqSection.tsx';
 import { Footer } from './components/Footer.tsx';
 import { DownloadModal } from './components/DownloadModal.tsx';
 import { OwnerPanel } from './components/OwnerPanel.tsx';
+import { VisitorAuthModal } from './components/VisitorAuthModal.tsx';
 import { triggerOrbitDownload } from './utils/downloadHelper.ts';
 import { ReleaseConfig, getStoredConfig, DEFAULT_RELEASE } from './utils/releaseStorage.ts';
 import { logPageView } from './utils/analyticsTracker.ts';
 import { getRoleState } from './utils/roleManager.ts';
-import { ShieldCheck, Info, X } from 'lucide-react';
+import { 
+  VisitorUser, 
+  getCurrentVisitor, 
+  incrementVisitorDownloadCount 
+} from './utils/visitorAuth.ts';
+import { Info, X, User } from 'lucide-react';
 
 export default function App() {
   const [config, setConfig] = useState<ReleaseConfig>(DEFAULT_RELEASE);
   const [downloadModalOpen, setDownloadModalOpen] = useState(false);
   const [ownerPanelOpen, setOwnerPanelOpen] = useState(false);
+  const [visitorAuthOpen, setVisitorAuthOpen] = useState(false);
+  const [currentVisitor, setCurrentVisitor] = useState<VisitorUser | null>(null);
   const [coOwnerBannerDismissed, setCoOwnerBannerDismissed] = useState(false);
   const [role, setRole] = useState<'owner' | 'co-owner'>('owner');
 
@@ -26,21 +34,32 @@ export default function App() {
     // 1. Load active release configuration
     setConfig(getStoredConfig());
 
-    // 2. Check active role
+    // 2. Load active visitor user
+    setCurrentVisitor(getCurrentVisitor());
+
+    // 3. Check active role
     const roleState = getRoleState();
     setRole(roleState.currentRole);
 
-    // 3. Log real page view telemetry
+    // 4. Log page view telemetry
     logPageView('Viewed VrcModMenu Homepage').catch(() => {});
 
-    // 4. Listen for role changes
+    // 5. Listen for role changes
     const handleRoleUpdate = () => {
       const updated = getRoleState();
       setRole(updated.currentRole);
     };
     window.addEventListener('vrcmodmenu:role-updated', handleRoleUpdate);
+
+    // 6. Listen for visitor auth changes
+    const handleVisitorAuthUpdate = () => {
+      setCurrentVisitor(getCurrentVisitor());
+    };
+    window.addEventListener('vrcmodmenu:visitor-auth-changed', handleVisitorAuthUpdate);
+
     return () => {
       window.removeEventListener('vrcmodmenu:role-updated', handleRoleUpdate);
+      window.removeEventListener('vrcmodmenu:visitor-auth-changed', handleVisitorAuthUpdate);
     };
   }, []);
 
@@ -49,11 +68,26 @@ export default function App() {
   };
 
   const handleOpenDownload = async () => {
+    // If not logged in, prompt visitor login modal first to capture their name
+    const visitor = getCurrentVisitor();
+    if (!visitor) {
+      setVisitorAuthOpen(true);
+      return;
+    }
+
+    incrementVisitorDownloadCount();
     await triggerOrbitDownload();
     setDownloadModalOpen(true);
   };
 
-  const handleDownloadTriggered = () => {
+  const handleDownloadTriggered = async () => {
+    const visitor = getCurrentVisitor();
+    if (!visitor) {
+      setVisitorAuthOpen(true);
+      return;
+    }
+    incrementVisitorDownloadCount();
+    await triggerOrbitDownload();
     setDownloadModalOpen(true);
   };
 
@@ -62,6 +96,14 @@ export default function App() {
     if (el) {
       el.scrollIntoView({ behavior: 'smooth' });
     }
+  };
+
+  const handleLoginSuccess = async (user: VisitorUser) => {
+    setCurrentVisitor(user);
+    // Proceed to initiate download after identifying
+    incrementVisitorDownloadCount();
+    await triggerOrbitDownload();
+    setDownloadModalOpen(true);
   };
 
   return (
@@ -73,7 +115,7 @@ export default function App() {
           <div className="flex items-center gap-2">
             <Info className="w-4 h-4 text-white" />
             <span>
-              <strong>CO-OWNER MODE ACTIVE:</strong> You have permissions to customize site branding & view analytics. File replacement is restricted to the Owner.
+              <strong>CO-OWNER MODE ACTIVE:</strong> You have permissions to customize site branding, AI queries & view analytics. File replacement is restricted to the Owner.
             </span>
             <button
               onClick={() => setOwnerPanelOpen(true)}
@@ -95,8 +137,10 @@ export default function App() {
       {/* Top Bar Navigation */}
       <Navbar
         config={config}
+        currentVisitor={currentVisitor}
         onOpenDownload={handleOpenDownload}
         onOpenOwnerPanel={() => setOwnerPanelOpen(true)}
+        onOpenLogin={() => setVisitorAuthOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -142,11 +186,18 @@ export default function App() {
         onClose={() => setDownloadModalOpen(false)}
       />
 
-      {/* Owner & Team Operations Panel */}
+      {/* Owner & Team Operations Panel with AI & Visitor Search */}
       <OwnerPanel
         isOpen={ownerPanelOpen}
         onClose={() => setOwnerPanelOpen(false)}
         onConfigUpdated={refreshConfig}
+      />
+
+      {/* Visitor Sign In Gate Modal */}
+      <VisitorAuthModal
+        isOpen={visitorAuthOpen}
+        onClose={() => setVisitorAuthOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
       />
     </div>
   );

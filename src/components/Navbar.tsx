@@ -1,15 +1,24 @@
 import React, { useState } from 'react';
 import { PlanetLogo } from './PlanetLogo.tsx';
-import { Download, Menu, X, Settings2 } from 'lucide-react';
+import { Download, Menu, X, Settings2, UserCheck, LogIn, LogOut } from 'lucide-react';
 import { ReleaseConfig } from '../utils/releaseStorage.ts';
+import { VisitorUser, logoutVisitor } from '../utils/visitorAuth.ts';
 
 interface NavbarProps {
   config: ReleaseConfig;
+  currentVisitor: VisitorUser | null;
   onOpenDownload: () => void;
   onOpenOwnerPanel: () => void;
+  onOpenLogin: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ config, onOpenDownload, onOpenOwnerPanel }) => {
+export const Navbar: React.FC<NavbarProps> = ({ 
+  config, 
+  currentVisitor,
+  onOpenDownload, 
+  onOpenOwnerPanel,
+  onOpenLogin
+}) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -67,15 +76,41 @@ export const Navbar: React.FC<NavbarProps> = ({ config, onOpenDownload, onOpenOw
           </a>
         </nav>
 
-        {/* Zone 3: 1 primary action + Owner Manager trigger */}
+        {/* Zone 3: 1 primary action + Visitor Identity / Owner triggers */}
         <div className="hidden sm:flex items-center gap-3 shrink-0">
+          
+          {/* Visitor Login Badge */}
+          {currentVisitor ? (
+            <div className="flex items-center gap-2 border border-neutral-800 bg-neutral-950 px-2.5 py-1.5 font-mono text-xs text-neutral-300">
+              <UserCheck className="w-3.5 h-3.5 text-white" />
+              <span className="font-bold text-white truncate max-w-[110px]" title={currentVisitor.username}>
+                {currentVisitor.username}
+              </span>
+              <button
+                onClick={logoutVisitor}
+                title="Log out"
+                className="text-neutral-500 hover:text-white ml-1"
+              >
+                <LogOut className="w-3 h-3" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={onOpenLogin}
+              className="flex items-center gap-1.5 border border-neutral-800 bg-black px-3 py-2 text-xs font-mono text-neutral-400 hover:text-white hover:border-neutral-600 transition-colors whitespace-nowrap"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Visitor Sign In</span>
+            </button>
+          )}
+
           <button
             onClick={onOpenOwnerPanel}
-            title="Owner: Manage release files & custom download links"
+            title="Owner & Co-Owner Portal"
             className="flex items-center gap-1.5 border border-neutral-800 bg-neutral-950 px-3 py-2 text-xs font-mono text-neutral-300 transition-colors hover:border-neutral-500 hover:text-white whitespace-nowrap shrink-0"
           >
             <Settings2 className="w-3.5 h-3.5 text-neutral-400" />
-            <span>Owner Panel</span>
+            <span>Portal</span>
           </button>
 
           <button
@@ -89,13 +124,28 @@ export const Navbar: React.FC<NavbarProps> = ({ config, onOpenDownload, onOpenOw
 
         {/* Mobile menu trigger */}
         <div className="flex md:hidden items-center gap-2">
+          {currentVisitor ? (
+            <span className="text-[11px] font-mono border border-neutral-800 px-2 py-1 text-white truncate max-w-[90px]">
+              {currentVisitor.username}
+            </span>
+          ) : (
+            <button
+              onClick={onOpenLogin}
+              className="p-2 text-neutral-400 hover:text-white border border-neutral-800"
+              title="Visitor Sign In"
+            >
+              <LogIn className="w-4 h-4" />
+            </button>
+          )}
+
           <button
             onClick={onOpenOwnerPanel}
             className="p-2 text-neutral-400 hover:text-white border border-neutral-800"
-            title="Owner Portal"
+            title="Portal Manager"
           >
             <Settings2 className="w-4 h-4" />
           </button>
+
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -148,6 +198,19 @@ export const Navbar: React.FC<NavbarProps> = ({ config, onOpenDownload, onOpenOw
             </a>
           </nav>
           <div className="pt-3 border-t border-neutral-900 flex flex-col gap-2">
+            {!currentVisitor && (
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onOpenLogin();
+                }}
+                className="w-full flex items-center justify-center gap-2 border border-neutral-800 bg-neutral-950 px-4 py-2 text-xs font-mono text-neutral-300 hover:text-white"
+              >
+                <LogIn className="w-4 h-4" />
+                <span>Visitor Sign In</span>
+              </button>
+            )}
+
             <button
               onClick={() => {
                 setMobileMenuOpen(false);
@@ -156,8 +219,9 @@ export const Navbar: React.FC<NavbarProps> = ({ config, onOpenDownload, onOpenOw
               className="w-full flex items-center justify-center gap-2 border border-neutral-800 bg-neutral-950 px-4 py-2 text-xs font-mono text-neutral-300 hover:text-white"
             >
               <Settings2 className="w-4 h-4" />
-              <span>Owner File Manager</span>
+              <span>Owner & AI Portal</span>
             </button>
+
             <button
               onClick={() => {
                 setMobileMenuOpen(false);
