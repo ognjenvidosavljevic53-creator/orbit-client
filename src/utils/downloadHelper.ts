@@ -102,20 +102,7 @@ export async function triggerOrbitDownload(): Promise<void> {
   const currentConfig = getStoredConfig();
   logDownloadEvent(currentConfig.fileName || 'Orbit-Client-v2.4.1.zip').catch(() => {});
 
-  // 1. If owner set an external download link
-  if (currentConfig.customDownloadUrl && currentConfig.customDownloadUrl.trim() !== '') {
-    const a = document.createElement('a');
-    a.href = currentConfig.customDownloadUrl.trim();
-    a.download = currentConfig.fileName || 'Orbit-Client.zip';
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    return;
-  }
-
-  // 2. If owner uploaded a custom file to the browser
+  // 1. If owner uploaded a custom file, STRICTLY download ONLY that file!
   const uploadedFile = await getStoredReleaseFile();
   if (uploadedFile) {
     const url = URL.createObjectURL(uploadedFile);
@@ -129,11 +116,25 @@ export async function triggerOrbitDownload(): Promise<void> {
     return;
   }
 
-  // 3. Fallback to default high-contrast release package
+  // 2. If owner set an external download link
+  if (currentConfig.customDownloadUrl && currentConfig.customDownloadUrl.trim() !== '') {
+    const a = document.createElement('a');
+    a.href = currentConfig.customDownloadUrl.trim();
+    a.download = currentConfig.fileName || 'Orbit-Client.zip';
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    return;
+  }
+
+  // 3. Fallback to default high-contrast release package with notnyxo credits
   const configContent = JSON.stringify(
     {
       portal: "VrcModMenu",
       client_name: "Orbit",
+      developer_credits: "notnyxo",
       version: currentConfig.version || "2.4.1",
       build_target: "VRChat Build 1482+",
       theme: {
@@ -142,40 +143,29 @@ export async function triggerOrbitDownload(): Promise<void> {
         hud_opacity: 0.92,
         accent_color: "#ffffff"
       },
-      features: {
-        avatar_tools: {
-          enable_pedestal_cloner: true,
-          bone_weight_limiter: 256,
-          enforce_fallback_shader: false,
-          strip_malicious_mesh_data: true
+      modules: {
+        movement: {
+          fly: true,
+          fly_speed: 3.5,
+          speedhack: 2.0,
+          noclip: false
         },
-        visual_esp: {
-          enabled: true,
-          draw_wireframe_box: true,
-          show_distance_meters: true,
-          show_trust_level_tag: true,
-          occlusion_culling: true,
-          radar_display: true
+        world_hacks: {
+          among_us: {
+            force_impostor: true,
+            reveal_impostors: true,
+            infinite_kill_range: true
+          },
+          boxing: {
+            double_hitbox: true,
+            reach_multiplier: 2.5,
+            instant_criticals: true
+          }
         },
-        performance: {
-          fps_limiter_mode: "vr_refresh_sync",
-          max_particles_per_avatar: 3000,
-          clamp_dynamic_bone_distance: 12.0,
-          limit_unfocused_frametime: true,
-          suppress_micro_stutters: true
-        },
-        anti_crash: {
-          active_shield: true,
-          drop_malicious_shaders: true,
-          sanitize_audio_sources: true,
-          max_audio_decibels: 0.0,
-          reject_corrupted_animator_packets: true
-        },
-        keybinds: {
-          toggle_overlay: "Insert",
-          toggle_quick_mute: "End",
-          toggle_esp: "F4",
-          rejoin_world: "F8"
+        stealth: {
+          spoof_author: true,
+          spoofed_name: "Official_VRC_Creator",
+          hwid_scramble: true
         }
       }
     },
@@ -185,11 +175,13 @@ export async function triggerOrbitDownload(): Promise<void> {
 
   const readmeContent = `======================================================
   VRC MOD MENU // ORBIT CLIENT RELEASE
+  Created & Developed by notnyxo
   Portal: VrcModMenu
   Client: Orbit
   Release: ${currentConfig.version}
 ======================================================
 
+Credits: notnyxo
 Release Date: March 2026
 Verified For: VRChat Game Build 1482+
 Checksum (SHA-256): ${currentConfig.sha256}
@@ -201,16 +193,16 @@ QUICK INSTALLATION:
    - orbit_config.json
 3. Place 'Orbit.dll' and 'orbit_config.json' inside:
    [SteamLibrary]/steamapps/common/VRChat/Mods/
-4. Launch VRChat via Steam or Oculus Launcher.
-5. In-Game Controls:
-   - Desktop Mode: Press [Insert] to toggle the Orbit Monochrome Overlay.
+4. In-Game Controls:
+   - Desktop Mode: Press [Insert] to toggle the Orbit Menu.
    - VR Mode: Click [Right Thumbstick] while opening the Quick Menu.
 
+Developed by notnyxo.
 Hosted on VrcModMenu Portal.
 `;
 
   const checksumContent = `${currentConfig.sha256} *Orbit.dll\n`;
-  const dllHeader = `MZ\x90\x00\x03\x00\x00\x00\x04\x00\x00\x00\xff\xff\x00\x00\xb8\x00\x00\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\x00\x00VrcModMenu.Orbit.Client.Assembly`;
+  const dllHeader = `MZ\x90\x00\x03\x00\x00\x00\x04\x00\x00\x00\xff\xff\x00\x00\xb8\x00\x00\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\x00\x00VrcModMenu.Orbit.Client.Assembly.by.notnyxo`;
 
   const blob = createZipArchive([
     { name: 'Orbit.dll', content: dllHeader },

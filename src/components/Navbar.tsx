@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { PlanetLogo } from './PlanetLogo.tsx';
-import { Download, Menu, X, Settings2, UserCheck, LogIn, LogOut } from 'lucide-react';
+import { Download, Menu, X, Settings2, UserCheck, LogIn, LogOut, Crown } from 'lucide-react';
 import { ReleaseConfig } from '../utils/releaseStorage.ts';
 import { VisitorUser, logoutVisitor } from '../utils/visitorAuth.ts';
+import { UserRole } from '../utils/roleManager.ts';
 
 interface NavbarProps {
   config: ReleaseConfig;
+  currentRole: UserRole;
   currentVisitor: VisitorUser | null;
   onOpenDownload: () => void;
   onOpenOwnerPanel: () => void;
@@ -14,17 +16,19 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ 
   config, 
+  currentRole,
   currentVisitor,
   onOpenDownload, 
   onOpenOwnerPanel,
   onOpenLogin
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isOwner = currentRole === 'owner';
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-neutral-900 bg-black/90 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-8 px-6 lg:px-8">
-        {/* Zone 1: Brand wordmark & orbital symbol */}
+        {/* Zone 1: Brand wordmark & orbital symbol with notnyxo credits */}
         <a
           href="#"
           className="group flex items-center gap-3 text-white transition-opacity hover:opacity-90 whitespace-nowrap shrink-0"
@@ -33,9 +37,14 @@ export const Navbar: React.FC<NavbarProps> = ({
             <PlanetLogo className="w-5 h-5 text-white" />
           </div>
           <div className="flex flex-col">
-            <span className="font-bold tracking-widest text-base sm:text-lg leading-tight uppercase font-mono">
-              {config.siteName || 'VrcModMenu'}
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="font-bold tracking-widest text-base sm:text-lg leading-tight uppercase font-mono">
+                {config.siteName || 'VrcModMenu'}
+              </span>
+              <span className="hidden sm:inline-block text-[10px] px-1.5 py-0.2 border border-neutral-800 text-neutral-400 font-mono">
+                dev: notnyxo
+              </span>
+            </div>
             <span className="text-[10px] tracking-widest text-neutral-400 font-mono">
               {config.clientName?.toUpperCase() || 'ORBIT'} CLIENT
             </span>
@@ -69,18 +78,23 @@ export const Navbar: React.FC<NavbarProps> = ({
             Safety
           </a>
           <a
-            href="#faq"
+            href="#credits"
             className="whitespace-nowrap shrink-0 transition-colors hover:text-white"
           >
-            FAQ
+            Credits
           </a>
         </nav>
 
-        {/* Zone 3: 1 primary action + Visitor Identity / Owner triggers */}
+        {/* Zone 3: 1 primary action + Owner/Visitor identity */}
         <div className="hidden sm:flex items-center gap-3 shrink-0">
           
-          {/* Visitor Login Badge */}
-          {currentVisitor ? (
+          {/* If Owner: Automatic permanent bypass with Owner badge (NO sign-in needed!) */}
+          {isOwner ? (
+            <div className="flex items-center gap-1.5 border border-white bg-white text-black px-2.5 py-1 font-mono text-xs font-bold uppercase tracking-wider">
+              <Crown className="w-3.5 h-3.5" />
+              <span>Owner Access</span>
+            </div>
+          ) : currentVisitor ? (
             <div className="flex items-center gap-2 border border-neutral-800 bg-neutral-950 px-2.5 py-1.5 font-mono text-xs text-neutral-300">
               <UserCheck className="w-3.5 h-3.5 text-white" />
               <span className="font-bold text-white truncate max-w-[110px]" title={currentVisitor.username}>
@@ -124,19 +138,15 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Mobile menu trigger */}
         <div className="flex md:hidden items-center gap-2">
-          {currentVisitor ? (
+          {isOwner ? (
+            <span className="text-[10px] font-mono border border-white bg-white text-black px-2 py-0.5 font-bold uppercase">
+              Owner
+            </span>
+          ) : currentVisitor ? (
             <span className="text-[11px] font-mono border border-neutral-800 px-2 py-1 text-white truncate max-w-[90px]">
               {currentVisitor.username}
             </span>
-          ) : (
-            <button
-              onClick={onOpenLogin}
-              className="p-2 text-neutral-400 hover:text-white border border-neutral-800"
-              title="Visitor Sign In"
-            >
-              <LogIn className="w-4 h-4" />
-            </button>
-          )}
+          ) : null}
 
           <button
             onClick={onOpenOwnerPanel}
@@ -160,7 +170,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
         <div className="md:hidden border-b border-neutral-900 bg-black px-6 py-4 space-y-3">
-          <nav className="flex flex-col space-y-3 text-sm font-medium text-neutral-300">
+          <nav className="flex flex-col space-y-3 text-sm font-medium text-neutral-300 font-mono">
             <a
               href="#features"
               onClick={() => setMobileMenuOpen(false)}
@@ -190,26 +200,17 @@ export const Navbar: React.FC<NavbarProps> = ({
               Safety
             </a>
             <a
-              href="#faq"
+              href="#credits"
               onClick={() => setMobileMenuOpen(false)}
               className="py-1 hover:text-white transition-colors"
             >
-              FAQ
+              Credits (notnyxo)
             </a>
           </nav>
-          <div className="pt-3 border-t border-neutral-900 flex flex-col gap-2">
-            {!currentVisitor && (
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onOpenLogin();
-                }}
-                className="w-full flex items-center justify-center gap-2 border border-neutral-800 bg-neutral-950 px-4 py-2 text-xs font-mono text-neutral-300 hover:text-white"
-              >
-                <LogIn className="w-4 h-4" />
-                <span>Visitor Sign In</span>
-              </button>
-            )}
+          <div className="pt-3 border-t border-neutral-900 flex flex-col gap-2 font-mono">
+            <div className="text-[11px] text-neutral-500 py-1">
+              Developed & Maintained by <span className="text-white font-bold">notnyxo</span>
+            </div>
 
             <button
               onClick={() => {

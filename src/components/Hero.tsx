@@ -47,7 +47,7 @@ export const Hero: React.FC<HeroProps> = ({
               <span className="text-neutral-600">/</span>
               <span className="text-white">{config.clientName || 'Orbit'} {config.version}</span>
               <span className="text-neutral-600">/</span>
-              <span>{config.gameBuild}</span>
+              <span>by <strong className="text-white">notnyxo</strong></span>
               <span className="text-neutral-600">/</span>
               <span className="text-neutral-400">Undetected Core</span>
             </div>
@@ -61,7 +61,7 @@ export const Hero: React.FC<HeroProps> = ({
                 </h1>
               </div>
               <p className="text-xl sm:text-2xl font-medium tracking-tight text-neutral-300 max-w-2xl font-mono">
-                {config.clientName?.toUpperCase() || 'ORBIT'} CLIENT — High-Performance VRChat Utility.
+                {config.clientName?.toUpperCase() || 'ORBIT'} CLIENT — by <span className="text-white font-bold underline decoration-1 underline-offset-4">notnyxo</span>
               </p>
             </div>
 

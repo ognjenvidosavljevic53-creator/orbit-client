@@ -2,23 +2,27 @@
  * releaseStorage.ts
  * Allows the website owner to upload/set custom files or URLs directly in the browser.
  * Uses IndexedDB for zero-size-limit binary storage and localStorage for metadata.
+ * Ensures that if a custom file is added, ONLY that file is served across the entire site.
  */
 
 export interface ReleaseConfig {
   siteName: string;
   clientName: string;
+  creatorName: string;
   version: string;
   fileName: string;
   fileSize: string;
   gameBuild: string;
   sha256: string;
-  customDownloadUrl: string; // If empty, uses stored file or default generated zip
+  customDownloadUrl: string;
   statusText: string;
+  hasCustomFile: boolean;
 }
 
 export const DEFAULT_RELEASE: ReleaseConfig = {
   siteName: "VrcModMenu",
   clientName: "Orbit",
+  creatorName: "notnyxo",
   version: "v2.4.1",
   fileName: "VrcModMenu-Orbit-v2.4.1.zip",
   fileSize: "4.2 MB",
@@ -26,6 +30,7 @@ export const DEFAULT_RELEASE: ReleaseConfig = {
   sha256: "8f2c0b4317a8e2d93e1b7c4d5a9f601b3e7284a1e9486c75302fa9bc4123e19b",
   customDownloadUrl: "",
   statusText: "Status: Online · Verified Build 1482",
+  hasCustomFile: false,
 };
 
 const DB_NAME = 'VrcModMenuDB';
@@ -52,7 +57,7 @@ export function getStoredConfig(): ReleaseConfig {
   try {
     const saved = localStorage.getItem(CONFIG_KEY);
     if (saved) {
-      return { ...DEFAULT_RELEASE, ...JSON.parse(saved) };
+      return { ...DEFAULT_RELEASE, ...JSON.parse(saved), creatorName: 'notnyxo' };
     }
   } catch (err) {
     console.warn('Failed to load release config from localStorage:', err);
@@ -62,7 +67,7 @@ export function getStoredConfig(): ReleaseConfig {
 
 export function saveStoredConfig(config: ReleaseConfig): void {
   try {
-    localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+    localStorage.setItem(CONFIG_KEY, JSON.stringify({ ...config, creatorName: 'notnyxo' }));
   } catch (err) {
     console.error('Failed to save release config:', err);
   }
@@ -83,15 +88,26 @@ export async function storeReleaseFile(file: File): Promise<{
   const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
   const fileSize = file.size > 1024 * 1024 ? `${sizeMb} MB` : `${(file.size / 1024).toFixed(0)} KB`;
 
-  // 3. Store in IndexedDB
+  // 3. Clear any existing files and overwrite with this exact file alone
   const db = await openDB();
   await new Promise<void>((resolve, reject) => {
     const transaction = db.transaction(STORE_NAME, 'readwrite');
     const store = transaction.objectStore(STORE_NAME);
+    // Explicitly delete old keys to ensure only this single file exists
+    store.clear();
     const putRequest = store.put(file, FILE_KEY);
     putRequest.onsuccess = () => resolve();
     putRequest.onerror = () => reject(putRequest.error);
   });
+
+  // 4. Update config so hasCustomFile is permanently true and filename is this exact one
+  const cfg = getStoredConfig();
+  cfg.fileName = file.name;
+  cfg.fileSize = fileSize;
+  cfg.sha256 = sha256;
+  cfg.hasCustomFile = true;
+  cfg.customDownloadUrl = ''; // Clear external URL so only this file is downloaded
+  saveStoredConfig(cfg);
 
   return {
     fileName: file.name,
@@ -123,10 +139,13 @@ export async function clearStoredReleaseFile(): Promise<void> {
     await new Promise<void>((resolve) => {
       const transaction = db.transaction(STORE_NAME, 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
-      const req = store.delete(FILE_KEY);
+      const req = store.clear();
       req.onsuccess = () => resolve();
       req.onerror = () => resolve();
     });
+    const cfg = getStoredConfig();
+    cfg.hasCustomFile = false;
+    saveStoredConfig(cfg);
   } catch {
     // Ignore
   }

@@ -5,6 +5,7 @@ import { FeaturesGrid } from './components/FeaturesGrid.tsx';
 import { ShowcasePreview } from './components/ShowcasePreview.tsx';
 import { DownloadSection } from './components/DownloadSection.tsx';
 import { SafetySection } from './components/SafetySection.tsx';
+import { CreditsSection } from './components/CreditsSection.tsx';
 import { FaqSection } from './components/FaqSection.tsx';
 import { Footer } from './components/Footer.tsx';
 import { DownloadModal } from './components/DownloadModal.tsx';
@@ -19,7 +20,7 @@ import {
   getCurrentVisitor, 
   incrementVisitorDownloadCount 
 } from './utils/visitorAuth.ts';
-import { Info, X, User } from 'lucide-react';
+import { Info, X } from 'lucide-react';
 
 export default function App() {
   const [config, setConfig] = useState<ReleaseConfig>(DEFAULT_RELEASE);
@@ -31,27 +32,20 @@ export default function App() {
   const [role, setRole] = useState<'owner' | 'co-owner'>('owner');
 
   useEffect(() => {
-    // 1. Load active release configuration
     setConfig(getStoredConfig());
-
-    // 2. Load active visitor user
     setCurrentVisitor(getCurrentVisitor());
 
-    // 3. Check active role
     const roleState = getRoleState();
     setRole(roleState.currentRole);
 
-    // 4. Log page view telemetry
     logPageView('Viewed VrcModMenu Homepage').catch(() => {});
 
-    // 5. Listen for role changes
     const handleRoleUpdate = () => {
       const updated = getRoleState();
       setRole(updated.currentRole);
     };
     window.addEventListener('vrcmodmenu:role-updated', handleRoleUpdate);
 
-    // 6. Listen for visitor auth changes
     const handleVisitorAuthUpdate = () => {
       setCurrentVisitor(getCurrentVisitor());
     };
@@ -67,8 +61,17 @@ export default function App() {
     setConfig(getStoredConfig());
   };
 
+  // AS THE OWNER: Never have to sign in!
   const handleOpenDownload = async () => {
-    // If not logged in, prompt visitor login modal first to capture their name
+    const roleState = getRoleState();
+    if (roleState.currentRole === 'owner') {
+      // Owner immediately downloads without any sign-in gate
+      await triggerOrbitDownload();
+      setDownloadModalOpen(true);
+      return;
+    }
+
+    // Visitors must sign in
     const visitor = getCurrentVisitor();
     if (!visitor) {
       setVisitorAuthOpen(true);
@@ -81,6 +84,13 @@ export default function App() {
   };
 
   const handleDownloadTriggered = async () => {
+    const roleState = getRoleState();
+    if (roleState.currentRole === 'owner') {
+      await triggerOrbitDownload();
+      setDownloadModalOpen(true);
+      return;
+    }
+
     const visitor = getCurrentVisitor();
     if (!visitor) {
       setVisitorAuthOpen(true);
@@ -100,7 +110,6 @@ export default function App() {
 
   const handleLoginSuccess = async (user: VisitorUser) => {
     setCurrentVisitor(user);
-    // Proceed to initiate download after identifying
     incrementVisitorDownloadCount();
     await triggerOrbitDownload();
     setDownloadModalOpen(true);
@@ -137,6 +146,7 @@ export default function App() {
       {/* Top Bar Navigation */}
       <Navbar
         config={config}
+        currentRole={role}
         currentVisitor={currentVisitor}
         onOpenDownload={handleOpenDownload}
         onOpenOwnerPanel={() => setOwnerPanelOpen(true)}
@@ -153,7 +163,7 @@ export default function App() {
           onOpenOwnerPanel={() => setOwnerPanelOpen(true)}
         />
 
-        {/* 6-Card Features Grid */}
+        {/* 6-Card Features Grid with Movement, World Hacks, Boxing, Spoof */}
         <FeaturesGrid />
 
         {/* Framing Area & Live Interactive Menu Simulator */}
@@ -169,11 +179,14 @@ export default function App() {
         {/* Safety Philosophy & Integrity */}
         <SafetySection />
 
+        {/* Official Credits to notnyxo */}
+        <CreditsSection />
+
         {/* Technical FAQ */}
         <FaqSection />
       </main>
 
-      {/* Footer with Discord, GitHub, Owner Link, and Safety Disclaimer */}
+      {/* Footer with notnyxo credits, Discord, GitHub, and Safety Disclaimer */}
       <Footer
         config={config}
         onOpenOwnerPanel={() => setOwnerPanelOpen(true)}
@@ -193,7 +206,7 @@ export default function App() {
         onConfigUpdated={refreshConfig}
       />
 
-      {/* Visitor Sign In Gate Modal */}
+      {/* Visitor Sign In Gate Modal (Only for regular visitors, Owner is exempt) */}
       <VisitorAuthModal
         isOpen={visitorAuthOpen}
         onClose={() => setVisitorAuthOpen(false)}

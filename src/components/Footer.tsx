@@ -1,6 +1,6 @@
 import React from 'react';
 import { PlanetLogo } from './PlanetLogo.tsx';
-import { Github, MessageSquare, ArrowUp, Shield, Settings2 } from 'lucide-react';
+import { Github, MessageSquare, ArrowUp, Shield, Settings2, Heart } from 'lucide-react';
 import { ReleaseConfig } from '../utils/releaseStorage.ts';
 
 interface FooterProps {
@@ -35,9 +35,18 @@ export const Footer: React.FC<FooterProps> = ({ config, onOpenOwnerPanel }) => {
                 </span>
               </div>
             </div>
-            <p className="text-xs text-neutral-400 max-w-sm leading-relaxed">
-              VrcModMenu official distribution hub for Orbit Client. Dedicated to spatial awareness, avatar rig safety, and extreme frametime stability.
+            
+            <p className="text-xs text-neutral-400 max-w-sm leading-relaxed font-mono">
+              VrcModMenu official distribution hub for Orbit Client. Developed and engineered by <strong className="text-white">notnyxo</strong>.
             </p>
+
+            <div className="flex items-center gap-2 pt-1 font-mono text-xs text-neutral-300">
+              <span className="text-neutral-500">Credits:</span>
+              <span className="px-2 py-0.5 border border-white bg-white text-black font-bold uppercase">
+                notnyxo
+              </span>
+            </div>
+
             <div className="flex flex-wrap items-center gap-3 pt-2">
               <a
                 href="https://discord.gg/orbit-vr"
@@ -98,8 +107,8 @@ export const Footer: React.FC<FooterProps> = ({ config, onOpenOwnerPanel }) => {
                 </a>
               </li>
               <li>
-                <a href="#faq" className="hover:text-white transition-colors">
-                  Technical FAQ
+                <a href="#credits" className="hover:text-white transition-colors font-bold text-neutral-300">
+                  Credits (notnyxo)
                 </a>
               </li>
             </ul>
@@ -112,6 +121,10 @@ export const Footer: React.FC<FooterProps> = ({ config, onOpenOwnerPanel }) => {
             </span>
             <div className="space-y-2 border border-neutral-800 bg-neutral-950 p-4">
               <div className="flex justify-between text-neutral-400">
+                <span>Developer:</span>
+                <span className="text-white font-bold">notnyxo</span>
+              </div>
+              <div className="flex justify-between text-neutral-400">
                 <span>Client:</span>
                 <span className="text-white font-semibold">{config.clientName || 'Orbit'} ({config.version})</span>
               </div>
@@ -120,14 +133,10 @@ export const Footer: React.FC<FooterProps> = ({ config, onOpenOwnerPanel }) => {
                 <span className="text-white">{config.gameBuild}</span>
               </div>
               <div className="flex justify-between text-neutral-400">
-                <span>Package:</span>
+                <span>Active Package:</span>
                 <span className="text-white font-mono text-[11px] truncate ml-2 max-w-[170px]" title={config.fileName}>
                   {config.fileName}
                 </span>
-              </div>
-              <div className="flex justify-between text-neutral-400">
-                <span>Network Phone-Home:</span>
-                <span className="text-white">None (0.0 B)</span>
               </div>
             </div>
           </div>
@@ -141,14 +150,14 @@ export const Footer: React.FC<FooterProps> = ({ config, onOpenOwnerPanel }) => {
             <span className="uppercase tracking-wider">Safety & Regulatory Disclaimer</span>
           </div>
           <p>
-            VrcModMenu distributes Orbit as an open-architecture personal utility tool designed solely for accessibility, performance optimization, and defensive client stabilization. VrcModMenu and Orbit are not affiliated with, endorsed by, or partnered with VRChat Inc. Modifying client memory or utilizing third-party mods violates the VRChat Terms of Service (EULA). Orbit developers do not condone malicious griefing, unauthorized avatar theft, or disruptive behavior. Use responsibly and at your own personal discretion.
+            VrcModMenu distributes Orbit as an open-architecture personal utility tool designed by notnyxo solely for accessibility, performance optimization, and defensive client stabilization. VrcModMenu and Orbit are not affiliated with, endorsed by, or partnered with VRChat Inc. Modifying client memory or utilizing third-party mods violates the VRChat Terms of Service (EULA). Use responsibly and at your own personal discretion.
           </p>
         </div>
 
-        {/* Bottom copyright row */}
+        {/* Bottom copyright row with notnyxo credits */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 font-mono text-xs text-neutral-400 pt-4">
           <div>
-            © {new Date().getFullYear()} {config.siteName?.toUpperCase() || 'VRCMODMENU'} · {config.clientName?.toUpperCase() || 'ORBIT'} CLIENT
+            © {new Date().getFullYear()} {config.siteName?.toUpperCase() || 'VRCMODMENU'} · Engineered by <strong className="text-white">notnyxo</strong>
           </div>
           <button
             onClick={scrollToTop}
