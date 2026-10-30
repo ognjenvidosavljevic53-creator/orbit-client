@@ -15,15 +15,18 @@ import {
 } from 'lucide-react';
 import { triggerOrbitDownload } from '../utils/downloadHelper.ts';
 import { ReleaseConfig } from '../utils/releaseStorage.ts';
+import { UserRole } from '../utils/roleManager.ts';
 
 interface DownloadSectionProps {
   config: ReleaseConfig;
+  currentRole: UserRole;
   onDownloadTriggered: () => void;
   onOpenOwnerPanel: () => void;
 }
 
 export const DownloadSection: React.FC<DownloadSectionProps> = ({ 
   config, 
+  currentRole,
   onDownloadTriggered,
   onOpenOwnerPanel
 }) => {
@@ -146,15 +149,19 @@ export const DownloadSection: React.FC<DownloadSectionProps> = ({
                   <span>{showChangelog ? 'Hide Changelog' : 'View Changelog'}</span>
                   {showChangelog ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                 </button>
-                <span className="text-neutral-700">·</span>
-                <button
-                  onClick={onOpenOwnerPanel}
-                  className="flex items-center gap-1 text-neutral-300 hover:text-white transition-colors"
-                  title="Owner: change the release file or URL"
-                >
-                  <Settings2 className="w-3 h-3" />
-                  <span>Owner: Manage File</span>
-                </button>
+                {currentRole === 'owner' && (
+                  <>
+                    <span className="text-neutral-700">·</span>
+                    <button
+                      onClick={onOpenOwnerPanel}
+                      className="flex items-center gap-1 text-neutral-300 hover:text-white transition-colors"
+                      title="Owner: change the release file or URL"
+                    >
+                      <Settings2 className="w-3 h-3" />
+                      <span>Owner: Manage File</span>
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 

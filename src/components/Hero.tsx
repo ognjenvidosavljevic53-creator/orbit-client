@@ -3,8 +3,11 @@ import { Download, ChevronRight, ShieldCheck, Cpu, Eye, Settings2 } from 'lucide
 import { PlanetLogo } from './PlanetLogo.tsx';
 import { ReleaseConfig } from '../utils/releaseStorage.ts';
 
+import { UserRole } from '../utils/roleManager.ts';
+
 interface HeroProps {
   config: ReleaseConfig;
+  currentRole: UserRole;
   onOpenDownload: () => void;
   onExplorePreview: () => void;
   onOpenOwnerPanel: () => void;
@@ -12,6 +15,7 @@ interface HeroProps {
 
 export const Hero: React.FC<HeroProps> = ({ 
   config, 
+  currentRole,
   onOpenDownload, 
   onExplorePreview,
   onOpenOwnerPanel
@@ -88,14 +92,16 @@ export const Hero: React.FC<HeroProps> = ({
                 <ChevronRight className="w-4 h-4" />
               </button>
 
-              <button
-                onClick={onOpenOwnerPanel}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 border border-neutral-800 bg-black px-4 py-3.5 text-xs font-mono text-neutral-400 hover:text-white hover:border-neutral-600 transition-colors"
-                title="Owner: change download files"
-              >
-                <Settings2 className="w-3.5 h-3.5" />
-                <span>Set Custom Files (Owner)</span>
-              </button>
+              {currentRole === 'owner' && (
+                <button
+                  onClick={onOpenOwnerPanel}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 border border-neutral-800 bg-black px-4 py-3.5 text-xs font-mono text-neutral-400 hover:text-white hover:border-neutral-600 transition-colors"
+                  title="Owner: change download files"
+                >
+                  <Settings2 className="w-3.5 h-3.5" />
+                  <span>Set Custom Files (Owner)</span>
+                </button>
+              )}
             </div>
 
             {/* Micro specs strip */}

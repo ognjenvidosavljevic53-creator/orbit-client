@@ -24,6 +24,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isOwner = currentRole === 'owner';
+  const isCoOwner = currentRole === 'co-owner';
+  const isPrivileged = isOwner || isCoOwner;
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-neutral-900 bg-black/90 backdrop-blur-md">
@@ -94,6 +96,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Crown className="w-3.5 h-3.5" />
               <span>Owner Access</span>
             </div>
+          ) : isCoOwner ? (
+            <div className="flex items-center gap-1.5 border border-neutral-600 bg-neutral-900 text-white px-2.5 py-1 font-mono text-xs font-bold uppercase tracking-wider">
+              <span>Co-Owner</span>
+            </div>
           ) : currentVisitor ? (
             <div className="flex items-center gap-2 border border-neutral-800 bg-neutral-950 px-2.5 py-1.5 font-mono text-xs text-neutral-300">
               <UserCheck className="w-3.5 h-3.5 text-white" />
@@ -118,14 +124,17 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
-          <button
-            onClick={onOpenOwnerPanel}
-            title="Owner & Co-Owner Portal"
-            className="flex items-center gap-1.5 border border-neutral-800 bg-neutral-950 px-3 py-2 text-xs font-mono text-neutral-300 transition-colors hover:border-neutral-500 hover:text-white whitespace-nowrap shrink-0"
-          >
-            <Settings2 className="w-3.5 h-3.5 text-neutral-400" />
-            <span>Portal</span>
-          </button>
+          {/* Owner Only Portal Button */}
+          {isOwner && (
+            <button
+              onClick={onOpenOwnerPanel}
+              title="Owner Operations Portal"
+              className="flex items-center gap-1.5 border border-neutral-800 bg-neutral-950 px-3 py-2 text-xs font-mono text-neutral-300 transition-colors hover:border-neutral-500 hover:text-white whitespace-nowrap shrink-0"
+            >
+              <Settings2 className="w-3.5 h-3.5 text-neutral-400" />
+              <span>Portal</span>
+            </button>
+          )}
 
           <button
             onClick={onOpenDownload}
@@ -142,19 +151,25 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="text-[10px] font-mono border border-white bg-white text-black px-2 py-0.5 font-bold uppercase">
               Owner
             </span>
+          ) : isCoOwner ? (
+            <span className="text-[10px] font-mono border border-neutral-600 bg-neutral-900 text-white px-2 py-0.5 font-bold uppercase">
+              Co-Owner
+            </span>
           ) : currentVisitor ? (
             <span className="text-[11px] font-mono border border-neutral-800 px-2 py-1 text-white truncate max-w-[90px]">
               {currentVisitor.username}
             </span>
           ) : null}
 
-          <button
-            onClick={onOpenOwnerPanel}
-            className="p-2 text-neutral-400 hover:text-white border border-neutral-800"
-            title="Portal Manager"
-          >
-            <Settings2 className="w-4 h-4" />
-          </button>
+          {isOwner && (
+            <button
+              onClick={onOpenOwnerPanel}
+              className="p-2 text-neutral-400 hover:text-white border border-neutral-800"
+              title="Portal Manager"
+            >
+              <Settings2 className="w-4 h-4" />
+            </button>
+          )}
 
           <button
             type="button"
@@ -212,16 +227,31 @@ export const Navbar: React.FC<NavbarProps> = ({
               Developed & Maintained by <span className="text-white font-bold">notnyxo</span>
             </div>
 
-            <button
-              onClick={() => {
-                setMobileMenuOpen(false);
-                onOpenOwnerPanel();
-              }}
-              className="w-full flex items-center justify-center gap-2 border border-neutral-800 bg-neutral-950 px-4 py-2 text-xs font-mono text-neutral-300 hover:text-white"
-            >
-              <Settings2 className="w-4 h-4" />
-              <span>Owner & AI Portal</span>
-            </button>
+            {!isOwner && !currentVisitor && (
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onOpenLogin();
+                }}
+                className="w-full flex items-center justify-center gap-2 border border-neutral-800 bg-neutral-950 px-4 py-2 text-xs font-mono text-neutral-300 hover:text-white"
+              >
+                <LogIn className="w-4 h-4" />
+                <span>Visitor Sign In</span>
+              </button>
+            )}
+
+            {isOwner && (
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onOpenOwnerPanel();
+                }}
+                className="w-full flex items-center justify-center gap-2 border border-neutral-800 bg-neutral-950 px-4 py-2 text-xs font-mono text-neutral-300 hover:text-white"
+              >
+                <Settings2 className="w-4 h-4" />
+                <span>Owner & AI Portal</span>
+              </button>
+            )}
 
             <button
               onClick={() => {

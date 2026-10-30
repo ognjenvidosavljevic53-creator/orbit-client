@@ -14,7 +14,8 @@ import { VisitorAuthModal } from './components/VisitorAuthModal.tsx';
 import { triggerOrbitDownload } from './utils/downloadHelper.ts';
 import { ReleaseConfig, getStoredConfig, DEFAULT_RELEASE } from './utils/releaseStorage.ts';
 import { logPageView } from './utils/analyticsTracker.ts';
-import { getRoleState } from './utils/roleManager.ts';
+import { getRoleState, UserRole } from './utils/roleManager.ts';
+import { OwnerAuthModal } from './components/OwnerAuthModal.tsx';
 import { 
   VisitorUser, 
   getCurrentVisitor, 
@@ -27,9 +28,10 @@ export default function App() {
   const [downloadModalOpen, setDownloadModalOpen] = useState(false);
   const [ownerPanelOpen, setOwnerPanelOpen] = useState(false);
   const [visitorAuthOpen, setVisitorAuthOpen] = useState(false);
+  const [ownerAuthOpen, setOwnerAuthOpen] = useState(false);
   const [currentVisitor, setCurrentVisitor] = useState<VisitorUser | null>(null);
   const [coOwnerBannerDismissed, setCoOwnerBannerDismissed] = useState(false);
-  const [role, setRole] = useState<'owner' | 'co-owner'>('owner');
+  const [role, setRole] = useState<UserRole>(() => getRoleState().currentRole);
 
   useEffect(() => {
     setConfig(getStoredConfig());
@@ -51,9 +53,19 @@ export default function App() {
     };
     window.addEventListener('vrcmodmenu:visitor-auth-changed', handleVisitorAuthUpdate);
 
+    // Discreet shortcut for Owner: Ctrl+Shift+O or Cmd+Shift+O
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'O' || e.key === 'o')) {
+        e.preventDefault();
+        setOwnerAuthOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
     return () => {
       window.removeEventListener('vrcmodmenu:role-updated', handleRoleUpdate);
       window.removeEventListener('vrcmodmenu:visitor-auth-changed', handleVisitorAuthUpdate);
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
 
@@ -158,6 +170,7 @@ export default function App() {
         {/* Hero Section */}
         <Hero
           config={config}
+          currentRole={role}
           onOpenDownload={handleOpenDownload}
           onExplorePreview={handleScrollToPreview}
           onOpenOwnerPanel={() => setOwnerPanelOpen(true)}
@@ -172,6 +185,7 @@ export default function App() {
         {/* Step-by-Step Installation & Direct Download */}
         <DownloadSection
           config={config}
+          currentRole={role}
           onDownloadTriggered={handleDownloadTriggered}
           onOpenOwnerPanel={() => setOwnerPanelOpen(true)}
         />
@@ -189,7 +203,9 @@ export default function App() {
       {/* Footer with notnyxo credits, Discord, GitHub, and Safety Disclaimer */}
       <Footer
         config={config}
+        currentRole={role}
         onOpenOwnerPanel={() => setOwnerPanelOpen(true)}
+        onOpenOwnerAuth={() => setOwnerAuthOpen(true)}
       />
 
       {/* Download Confirmation & Verification Modal */}
@@ -204,6 +220,16 @@ export default function App() {
         isOpen={ownerPanelOpen}
         onClose={() => setOwnerPanelOpen(false)}
         onConfigUpdated={refreshConfig}
+      />
+
+      {/* Owner Passkey Gate Modal (Discreetly unlockable via footer or Ctrl+Shift+O) */}
+      <OwnerAuthModal
+        isOpen={ownerAuthOpen}
+        onClose={() => setOwnerAuthOpen(false)}
+        onSuccess={() => {
+          setRole('owner');
+          setOwnerPanelOpen(true);
+        }}
       />
 
       {/* Visitor Sign In Gate Modal (Only for regular visitors, Owner is exempt) */}

@@ -40,7 +40,9 @@ import {
   RoleState, 
   getRoleState, 
   saveRoleState, 
-  generateCoOwnerInviteLink 
+  logoutRole,
+  generateCoOwnerInviteLink,
+  generateOwnerSecretLink 
 } from '../utils/roleManager.ts';
 import { PlanetLogo } from './PlanetLogo.tsx';
 import { OrbitAiSentinel } from './OrbitAiSentinel.tsx';
@@ -65,6 +67,7 @@ export const OwnerPanel: React.FC<OwnerPanelProps> = ({ isOpen, onClose, onConfi
   // Role State
   const [roleState, setRoleState] = useState<RoleState>(getRoleState());
   const [copiedInvite, setCopiedInvite] = useState(false);
+  const [copiedOwnerLink, setCopiedOwnerLink] = useState(false);
 
   // Analytics & Visitor Search State
   const [events, setEvents] = useState<AnalyticsEvent[]>([]);
@@ -165,6 +168,13 @@ export const OwnerPanel: React.FC<OwnerPanelProps> = ({ isOpen, onClose, onConfi
     navigator.clipboard.writeText(link);
     setCopiedInvite(true);
     setTimeout(() => setCopiedInvite(false), 2500);
+  };
+
+  const handleCopyOwnerLink = () => {
+    const link = generateOwnerSecretLink();
+    navigator.clipboard.writeText(link);
+    setCopiedOwnerLink(true);
+    setTimeout(() => setCopiedOwnerLink(false), 2500);
   };
 
   const handleRoleSwitch = (newRole: UserRole) => {
@@ -773,13 +783,17 @@ export const OwnerPanel: React.FC<OwnerPanelProps> = ({ isOpen, onClose, onConfi
                   </p>
                 </div>
                 <span className={`px-2 py-1 text-xs font-bold border ${
-                  roleState.currentRole === 'owner' ? 'border-white bg-white text-black' : 'border-neutral-600 bg-neutral-900 text-white'
+                  roleState.currentRole === 'owner' 
+                    ? 'border-white bg-white text-black' 
+                    : roleState.currentRole === 'co-owner'
+                    ? 'border-neutral-500 bg-neutral-900 text-white'
+                    : 'border-neutral-700 bg-neutral-950 text-neutral-400'
                 }`}>
                   {roleState.currentRole.toUpperCase()}
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => handleRoleSwitch('owner')}
@@ -794,7 +808,7 @@ export const OwnerPanel: React.FC<OwnerPanelProps> = ({ isOpen, onClose, onConfi
                     {roleState.currentRole === 'owner' && <Check className="w-3.5 h-3.5 text-white" />}
                   </div>
                   <p className="text-[10px] text-neutral-400 mt-1">
-                    Full privileges: replace download files, customize website, view logs.
+                    Full control: set custom files, customize branding, run AI audits.
                   </p>
                 </button>
 
@@ -812,12 +826,61 @@ export const OwnerPanel: React.FC<OwnerPanelProps> = ({ isOpen, onClose, onConfi
                     {roleState.currentRole === 'co-owner' && <Check className="w-3.5 h-3.5 text-white" />}
                   </div>
                   <p className="text-[10px] text-neutral-400 mt-1">
-                    Customizer: can change branding & texts, but CANNOT change release files.
+                    Customizer: can edit site text and view telemetry, cannot change files.
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleRoleSwitch('guest');
+                    onClose();
+                  }}
+                  className={`p-3 border text-left transition-colors ${
+                    roleState.currentRole === 'guest'
+                      ? 'border-white bg-neutral-900 text-white'
+                      : 'border-neutral-800 bg-black text-neutral-400 hover:text-white'
+                  }`}
+                >
+                  <div className="font-bold flex items-center justify-between">
+                    <span>Lock / Guest Mode</span>
+                    {roleState.currentRole === 'guest' && <Check className="w-3.5 h-3.5 text-white" />}
+                  </div>
+                  <p className="text-[10px] text-neutral-400 mt-1">
+                    Standard visitor view. All owner controls and file managers are hidden.
                   </p>
                 </button>
               </div>
             </div>
 
+            {/* Owner Secret Direct Access Link */}
+            {isOwner && (
+              <div className="border border-neutral-800 bg-black p-5 space-y-3">
+                <div className="flex items-center gap-2 text-white font-bold">
+                  <Lock className="w-4 h-4 text-white" />
+                  <span className="uppercase">Owner Direct Bookmark Link (Bypasses Sign In)</span>
+                </div>
+                <p className="text-neutral-400 text-xs leading-relaxed">
+                  Bookmark or save this private link. Opening this link automatically authenticates you as <strong>Owner (notnyxo)</strong> with zero passwords or sign-in prompts.
+                </p>
+
+                <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                  <div className="flex-1 border border-neutral-800 bg-neutral-950 px-3 py-2 text-neutral-300 text-[11px] truncate select-all">
+                    {generateOwnerSecretLink()}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCopyOwnerLink}
+                    className="flex items-center justify-center gap-2 border border-white bg-white px-4 py-2 font-bold uppercase tracking-wider text-black hover:bg-black hover:text-white transition-colors"
+                  >
+                    {copiedOwnerLink ? <Check className="w-3.5 h-3.5 text-black" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiedOwnerLink ? 'Owner Link Copied!' : 'Copy Owner Link'}</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Co-Owner Instant Invite Link */}
             <div className="border border-neutral-800 bg-black p-5 space-y-3">
               <div className="flex items-center gap-2 text-white font-bold">
                 <Users className="w-4 h-4" />
