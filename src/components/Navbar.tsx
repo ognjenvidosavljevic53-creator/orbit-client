@@ -1,26 +1,24 @@
 import React, { useState } from 'react';
 import { PlanetLogo } from './PlanetLogo.tsx';
-import { Download, Menu, X, Settings2, UserCheck, LogIn, LogOut, Crown } from 'lucide-react';
+import { Download, Menu, X, Settings2, Crown } from 'lucide-react';
 import { ReleaseConfig } from '../utils/releaseStorage.ts';
-import { VisitorUser, logoutVisitor } from '../utils/visitorAuth.ts';
+import { VisitorUser } from '../utils/visitorAuth.ts';
 import { UserRole } from '../utils/roleManager.ts';
 
 interface NavbarProps {
   config: ReleaseConfig;
   currentRole: UserRole;
-  currentVisitor: VisitorUser | null;
+  currentVisitor?: VisitorUser | null;
   onOpenDownload: () => void;
   onOpenOwnerPanel: () => void;
-  onOpenLogin: () => void;
+  onOpenLogin?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ 
   config, 
   currentRole,
-  currentVisitor,
   onOpenDownload, 
   onOpenOwnerPanel,
-  onOpenLogin
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isOwner = currentRole === 'owner';
@@ -90,38 +88,17 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Zone 3: 1 primary action + Owner/Visitor identity */}
         <div className="hidden sm:flex items-center gap-3 shrink-0">
           
-          {/* If Owner: Automatic permanent bypass with Owner badge (NO sign-in needed!) */}
-          {isOwner ? (
+          {/* If Owner: Automatic permanent bypass with Owner badge */}
+          {isOwner && (
             <div className="flex items-center gap-1.5 border border-white bg-white text-black px-2.5 py-1 font-mono text-xs font-bold uppercase tracking-wider">
               <Crown className="w-3.5 h-3.5" />
               <span>Owner Access</span>
             </div>
-          ) : isCoOwner ? (
+          )}
+          {isCoOwner && (
             <div className="flex items-center gap-1.5 border border-neutral-600 bg-neutral-900 text-white px-2.5 py-1 font-mono text-xs font-bold uppercase tracking-wider">
               <span>Co-Owner</span>
             </div>
-          ) : currentVisitor ? (
-            <div className="flex items-center gap-2 border border-neutral-800 bg-neutral-950 px-2.5 py-1.5 font-mono text-xs text-neutral-300">
-              <UserCheck className="w-3.5 h-3.5 text-white" />
-              <span className="font-bold text-white truncate max-w-[110px]" title={currentVisitor.username}>
-                {currentVisitor.username}
-              </span>
-              <button
-                onClick={logoutVisitor}
-                title="Log out"
-                className="text-neutral-500 hover:text-white ml-1"
-              >
-                <LogOut className="w-3 h-3" />
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={onOpenLogin}
-              className="flex items-center gap-1.5 border border-neutral-800 bg-black px-3 py-2 text-xs font-mono text-neutral-400 hover:text-white hover:border-neutral-600 transition-colors whitespace-nowrap"
-            >
-              <LogIn className="w-3.5 h-3.5" />
-              <span>Visitor Sign In</span>
-            </button>
           )}
 
           {/* Owner Only Portal Button */}
@@ -154,10 +131,6 @@ export const Navbar: React.FC<NavbarProps> = ({
           ) : isCoOwner ? (
             <span className="text-[10px] font-mono border border-neutral-600 bg-neutral-900 text-white px-2 py-0.5 font-bold uppercase">
               Co-Owner
-            </span>
-          ) : currentVisitor ? (
-            <span className="text-[11px] font-mono border border-neutral-800 px-2 py-1 text-white truncate max-w-[90px]">
-              {currentVisitor.username}
             </span>
           ) : null}
 
@@ -226,19 +199,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="text-[11px] text-neutral-500 py-1">
               Developed & Maintained by <span className="text-white font-bold">notnyxo</span>
             </div>
-
-            {!isOwner && !currentVisitor && (
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onOpenLogin();
-                }}
-                className="w-full flex items-center justify-center gap-2 border border-neutral-800 bg-neutral-950 px-4 py-2 text-xs font-mono text-neutral-300 hover:text-white"
-              >
-                <LogIn className="w-4 h-4" />
-                <span>Visitor Sign In</span>
-              </button>
-            )}
 
             {isOwner && (
               <button

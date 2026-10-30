@@ -1,6 +1,6 @@
 import React from 'react';
 import { PlanetLogo } from './PlanetLogo.tsx';
-import { Github, MessageSquare, ArrowUp, Shield, Settings2, Heart, Lock } from 'lucide-react';
+import { Github, MessageSquare, ArrowUp, Shield, Settings2, Heart } from 'lucide-react';
 import { ReleaseConfig } from '../utils/releaseStorage.ts';
 import { UserRole } from '../utils/roleManager.ts';
 
@@ -8,14 +8,13 @@ interface FooterProps {
   config: ReleaseConfig;
   currentRole: UserRole;
   onOpenOwnerPanel: () => void;
-  onOpenOwnerAuth: () => void;
+  onOpenOwnerAuth?: () => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({ 
   config, 
   currentRole,
   onOpenOwnerPanel,
-  onOpenOwnerAuth
 }) => {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -79,22 +78,13 @@ export const Footer: React.FC<FooterProps> = ({
                 <span>GitHub</span>
               </a>
 
-              {isOwner ? (
+              {isOwner && (
                 <button
                   onClick={onOpenOwnerPanel}
                   className="flex items-center gap-1.5 border border-neutral-800 bg-neutral-950 px-3 py-2 text-xs font-mono text-neutral-400 hover:text-white hover:border-neutral-600 transition-colors"
                 >
                   <Settings2 className="w-3.5 h-3.5" />
                   <span>Owner Portal</span>
-                </button>
-              ) : (
-                <button
-                  onClick={onOpenOwnerAuth}
-                  className="flex items-center gap-1.5 border border-neutral-900 bg-black px-2.5 py-2 text-[10px] font-mono text-neutral-600 hover:text-neutral-400 hover:border-neutral-800 transition-colors"
-                  title="Owner Access Passkey"
-                >
-                  <Lock className="w-3 h-3 text-neutral-600" />
-                  <span>Owner Gate</span>
                 </button>
               )}
             </div>

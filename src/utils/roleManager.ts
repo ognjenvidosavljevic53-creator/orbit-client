@@ -40,8 +40,7 @@ export function getRoleState(): RoleState {
         ownerParam === 'notnyxo' || 
         ownerParam === '1337' || 
         keyParam === 'notnyxo' || 
-        keyParam === '1337' ||
-        ownerParam === 'true'
+        keyParam === '1337'
       ) {
         const saved = localStorage.getItem(ROLE_STORAGE_KEY);
         const state = saved ? { ...DEFAULT_ROLE_STATE, ...JSON.parse(saved) } : { ...DEFAULT_ROLE_STATE };

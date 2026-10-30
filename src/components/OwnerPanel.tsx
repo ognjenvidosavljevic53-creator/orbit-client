@@ -217,6 +217,11 @@ export const OwnerPanel: React.FC<OwnerPanelProps> = ({ isOpen, onClose, onConfi
 
   if (!isOpen) return null;
 
+  // Strict guard: normal visitors/guests can NEVER render or inspect the OwnerPanel
+  if ((roleState.currentRole as string) === 'guest') {
+    return null;
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
       <div className="relative w-full max-w-4xl border border-white bg-neutral-950 p-6 sm:p-8 max-h-[92vh] overflow-y-auto shadow-[0_0_60px_rgba(255,255,255,0.18)]">
